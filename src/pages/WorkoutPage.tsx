@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { WorkoutPlan, Workout, Exercise } from '../types';
+import { WorkoutPlan, Workout, Exercise, WorkoutExercise } from '../types';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import { CheckCircleIcon, DumbbellIcon, XCircleIcon, TrashIcon } from '../components/ui/Icons';
@@ -10,8 +10,12 @@ interface WorkoutPageProps {
   isTrainerContext?: boolean;
 }
 
-const emptyWorkout: Workout = { userId: '', name: '',day: '', exercises: [], completed: false };
-const emptyExercise: Exercise = { name: '', type: 'Fuerza', sets: 3, reps: '10', rest: '60s' };
+const emptyWorkout: Workout = { name: '', exercises: [], estimatedDuration: 45, difficulty: 'beginner' };
+const emptyExercise: Exercise = { name: '', type: 'STRENGTH' };
+const emptyWorkoutExercise: WorkoutExercise = { 
+  exercise: emptyExercise, 
+  sets: [{ reps: 10, restTime: 60 }] 
+};
 
 const WorkoutPage: React.FC<WorkoutPageProps> = ({ userId, isTrainerContext }) => {
   const [workoutPlan, setWorkoutPlan] = useState<WorkoutPlan | null>(null);
@@ -50,17 +54,8 @@ const WorkoutPage: React.FC<WorkoutPageProps> = ({ userId, isTrainerContext }) =
   const handleToggleWorkoutCompletion = async (workoutId: string) => {
     if (isTrainerContext || !workoutPlan) return;
     
-    const updatedWorkouts = workoutPlan.workouts.map(w => 
-      w._id === workoutId ? { ...w, completed: !w.completed } : w
-    );
-    
-    try {
-      const response = await plans.updateWorkoutPlan(userId, { ...workoutPlan, workouts: updatedWorkouts });
-      setWorkoutPlan(response.data.data);
-    } catch (err: any) {
-      console.error('Error updating workout completion:', err);
-      setError(err.response?.data?.message || 'Error al actualizar el estado del entrenamiento.');
-    }
+    // Por ahora, solo mostraremos un mensaje ya que la nueva estructura no tiene completed
+    console.log('Workout completion tracking not implemented in new structure');
   };
 
   const handleDeleteWorkout = async (workoutId: string) => {
@@ -181,20 +176,21 @@ const WorkoutPage: React.FC<WorkoutPageProps> = ({ userId, isTrainerContext }) =
             )}
             <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold text-secondary flex items-center"><DumbbellIcon className="w-6 h-6 mr-3"/>{workout.name}</h2>
-                <span className="font-semibold text-text-muted">{workout.day}</span>
+                <span className="font-semibold text-text-muted">{workout.estimatedDuration} min</span>
             </div>
             
             <div className="flex-1 space-y-3">
-              {workout.exercises.map((exercise, index) => (
+              {workout.exercises.map((workoutExercise, index) => (
                 <div key={index} className="p-3 bg-base-100 rounded-md flex justify-between items-center">
                   <div>
-                    <p className="font-semibold text-text-base">{exercise.name}</p>
+                    <p className="font-semibold text-text-base">{workoutExercise.exercise.name}</p>
                     <div className="flex items-center gap-x-4 text-sm text-text-muted mt-1">
-                      <span>{exercise.type}</span>
+                      <span>{workoutExercise.exercise.type}</span>
                       <span className="font-mono">
-                        {exercise.sets && `${exercise.sets}x`}
-                        {exercise.reps || exercise.duration}
-                        {exercise.rest && ` (Desc: ${exercise.rest})`}
+                        {workoutExercise.sets.length} sets
+                        {workoutExercise.sets[0]?.reps && ` x ${workoutExercise.sets[0].reps} reps`}
+                        {workoutExercise.sets[0]?.duration && ` x ${workoutExercise.sets[0].duration}s`}
+                        {workoutExercise.sets[0]?.restTime && ` (Desc: ${workoutExercise.sets[0].restTime}s)`}
                       </span>
                     </div>
                   </div>
@@ -215,14 +211,10 @@ const WorkoutPage: React.FC<WorkoutPageProps> = ({ userId, isTrainerContext }) =
             {!isTrainerContext && (
                 <button
                     onClick={() => handleToggleWorkoutCompletion(workout._id!)}
-                    className={`mt-6 w-full flex items-center justify-center py-2 px-4 rounded-lg text-sm font-semibold transition-colors ${
-                        workout.completed
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                    className="mt-6 w-full flex items-center justify-center py-2 px-4 rounded-lg text-sm font-semibold transition-colors bg-gray-100 text-gray-600 hover:bg-gray-200"
                 >
-                    {workout.completed ? <CheckCircleIcon className="w-5 h-5 mr-2" /> : <XCircleIcon className="w-5 h-5 mr-2" />}
-                    {workout.completed ? 'Completado' : 'Marcar como completado'}
+                    <XCircleIcon className="w-5 h-5 mr-2" />
+                    Marcar como completado
                 </button>
             )}
           </Card>
@@ -237,10 +229,8 @@ const WorkoutPage: React.FC<WorkoutPageProps> = ({ userId, isTrainerContext }) =
        <Modal title="Añadir Sesión de Entrenamiento" isOpen={isWorkoutModalOpen} onClose={() => setWorkoutModalOpen(false)}>
             <form onSubmit={(e) => { e.preventDefault(); handleAddWorkout(); }} className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-text-muted">Día de la Semana</label>
-                    <select name="day" value={newWorkout.day} onChange={handleWorkoutModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2">
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => <option key={day} value={day}>{day}</option>)}
-                    </select>
+                    <label className="block text-sm font-medium text-text-muted">Duración Estimada (minutos)</label>
+                    <input type="number" name="estimatedDuration" value={newWorkout.estimatedDuration} onChange={handleWorkoutModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="45" />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-text-muted">Nombre del Entrenamiento</label>
@@ -263,18 +253,14 @@ const WorkoutPage: React.FC<WorkoutPageProps> = ({ userId, isTrainerContext }) =
                     <label className="block text-sm font-medium text-text-muted">Tipo</label>
                     <input type="text" name="type" value={newExercise.type} onChange={handleExerciseModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="Fuerza, Cardio, etc." />
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-text-muted">Sets</label>
-                        <input type="number" name="sets" value={newExercise.sets} onChange={handleExerciseModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" />
+                        <label className="block text-sm font-medium text-text-muted">Repeticiones</label>
+                        <input type="number" name="reps" value={newExercise.reps || 10} onChange={handleExerciseModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="10" />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-text-muted">Reps/Duración</label>
-                        <input type="text" name="reps" value={newExercise.reps} onChange={handleExerciseModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="10 / 30s" />
-                    </div>
-                     <div>
-                        <label className="block text-sm font-medium text-text-muted">Descanso</label>
-                        <input type="text" name="rest" value={newExercise.rest} onChange={handleExerciseModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="60s" />
+                        <label className="block text-sm font-medium text-text-muted">Duración (segundos)</label>
+                        <input type="number" name="duration" value={newExercise.duration || 30} onChange={handleExerciseModalChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="30" />
                     </div>
                 </div>
                 <div className="flex justify-end gap-4 pt-4">

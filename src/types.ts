@@ -12,10 +12,22 @@ export interface User {
   clients?: string[]; // Only for trainers
 }
 
+export interface Food {
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+}
+
 export interface Meal {
   name: string;
   time: string;
-  foods: string[];
+  foods: {
+    food: Food;
+    quantity: number;
+  }[];
 }
 
 export interface Supplement {
@@ -28,7 +40,14 @@ export interface DietPlan {
   name: string;
   dailyActivity: string;
   supplementation: Supplement[];
-  totals: {
+  actualMacros?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber?: number;
+  };
+  totals?: {
     calories: number;
     protein: number;
     carbs: number;
@@ -49,29 +68,55 @@ export interface DietPlan {
 export interface Exercise {
   name: string;
   type: string;
-  sets?: number;
-  reps?: string;
-  duration?: string;
-  rest?: string;
+  description?: string;
+  instructions?: string[];
+  targetMuscles?: string[];
+  equipment?: string[];
+  difficulty?: string;
+  reps?: number;
+  duration?: number;
+}
+
+export interface WorkoutSet {
+  reps?: number;
+  weight?: number;
+  duration?: number;
+  distance?: number;
+  restTime?: number;
+}
+
+export interface WorkoutExercise {
+  exercise: Exercise;
+  sets: WorkoutSet[];
+  notes?: string;
 }
 
 export interface Workout {
   _id?: string;
-  userId: string;
-  day: string;
   name: string;
-  exercises: Exercise[];
-  completed: boolean;
+  exercises: WorkoutExercise[];
+  estimatedDuration?: number;
+  difficulty?: string;
+  notes?: string;
+}
+
+export interface ScheduleItem {
+  dayOfWeek: number;
+  workoutIndex: number;
 }
 
 export interface WorkoutPlan {
+  _id?: string;
   userId: string;
   trainerId: string;
   title: string;
-  schedule: string[];
-  startDate: string;
-  isActive: boolean;
+  description?: string;
   workouts: Workout[];
+  schedule: ScheduleItem[];
+  startDate: string;
+  endDate?: string;
+  isActive: boolean;
+  notes?: string;
 }
 
 export interface ProgressPhotos {

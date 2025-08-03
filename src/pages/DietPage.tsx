@@ -95,7 +95,36 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
   const handleModalInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { name, value } = e.target;
       if (name === 'foods') {
-          setNewMeal(prev => ({...prev, foods: value.split('\n')}));
+          // Convertir el texto a la estructura de objetos
+          const foodLines = value.split('\n').filter(line => line.trim());
+          const foods = foodLines.map(line => {
+              // Asumir formato: "100g Pollo" o "100 Pollo"
+              const match = line.match(/^(\d+)(?:g)?\s+(.+)$/);
+              if (match) {
+                  return {
+                      quantity: parseInt(match[1]),
+                      food: {
+                          name: match[2].trim(),
+                          calories: 0,
+                          protein: 0,
+                          carbs: 0,
+                          fat: 0
+                      }
+                  };
+              }
+              // Si no coincide el formato, crear un objeto con cantidad 100g
+              return {
+                  quantity: 100,
+                  food: {
+                      name: line.trim(),
+                      calories: 0,
+                      protein: 0,
+                      carbs: 0,
+                      fat: 0
+                  }
+              };
+          });
+          setNewMeal(prev => ({...prev, foods}));
       } else {
           setNewMeal(prev => ({ ...prev, [name]: value }));
       }
@@ -126,7 +155,7 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
         <div className="text-center p-8">
             <p className="text-text-muted mb-4">No se encontró un plan de alimentación para este usuario.</p>
             {isTrainerContext && (
-                <button onClick={() => setDietPlan({ userId, name: "Nuevo Plan", dailyActivity: "", supplementation: [], description: "", totals: { calories: 0, protein: 0, carbs: 0, fat: 0 }, targetCalories: 0, targetProtein: 0, targetCarbs: 0, targetFat: 0, meals: [], startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], notes: "" })} className="bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-focus">
+                <button onClick={() => setDietPlan({ userId, name: "Nuevo Plan", dailyActivity: "", supplementation: [], description: "", actualMacros: { calories: 0, protein: 0, carbs: 0, fat: 0 }, targetCalories: 0, targetProtein: 0, targetCarbs: 0, targetFat: 0, meals: [], startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], notes: "" })} className="bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-focus">
                     Crear Plan de Dieta
                 </button>
             )}
@@ -160,19 +189,19 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                 <div className="p-3 bg-base-100 rounded-lg">
                     <p className="text-sm text-text-muted">Calorías</p>
-                    <p className="text-2xl font-bold text-amber-500">{dietPlan.totals.calories.toFixed(0)}</p>
+                    <p className="text-2xl font-bold text-amber-500">{dietPlan.actualMacros?.calories?.toFixed(0) || '0'}</p>
                 </div>
                 <div className="p-3 bg-base-100 rounded-lg">
                     <p className="text-sm text-text-muted">Proteína</p>
-                    <p className="text-2xl font-bold text-sky-500">{dietPlan.totals.protein.toFixed(0)}g</p>
+                    <p className="text-2xl font-bold text-sky-500">{dietPlan.actualMacros?.protein?.toFixed(0) || '0'}g</p>
                 </div>
                 <div className="p-3 bg-base-100 rounded-lg">
                     <p className="text-sm text-text-muted">Carbs</p>
-                    <p className="text-2xl font-bold text-orange-500">{dietPlan.totals.carbs.toFixed(0)}g</p>
+                    <p className="text-2xl font-bold text-orange-500">{dietPlan.actualMacros?.carbs?.toFixed(0) || '0'}g</p>
                 </div>
                 <div className="p-3 bg-base-100 rounded-lg">
                     <p className="text-sm text-text-muted">Grasa</p>
-                    <p className="text-2xl font-bold text-red-500">{dietPlan.totals.fat.toFixed(0)}g</p>
+                    <p className="text-2xl font-bold text-red-500">{dietPlan.actualMacros?.fat?.toFixed(0) || '0'}g</p>
                 </div>
             </div>
         </Card>
@@ -196,7 +225,11 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
             <div className="my-4 space-y-2 text-sm flex-1">
               <h4 className="font-semibold">Alimentos (elige una opción de cada línea):</h4>
               <ul className="list-disc list-inside text-text-muted">
-                {meal.foods.map((food, i) => <li key={i}>{food}</li>)}
+                {meal.foods.map((foodItem, i) => (
+                  <li key={i}>
+                    {foodItem.quantity}g {foodItem.food.name}
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -241,7 +274,7 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
             </div>
              <div>
                 <label className="block text-sm font-medium text-text-muted">Alimentos (uno por línea, usa / para opciones)</label>
-                <textarea name="foods" value={newMeal.foods.join('\n')} onChange={handleModalInputChange} rows={5} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="Ej: 130g Pollo / 150g Pavo\n40g Arroz / 150g Patata"></textarea>
+                <textarea name="foods" value={newMeal.foods.map(foodItem => `${foodItem.quantity}g ${foodItem.food.name}`).join('\n')} onChange={handleModalInputChange} rows={5} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="Ej: 130g Pollo\n150g Pavo\n40g Arroz"></textarea>
             </div>
             
             <div className="flex justify-end gap-4 pt-4">
