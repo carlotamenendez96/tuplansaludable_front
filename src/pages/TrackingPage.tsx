@@ -320,12 +320,12 @@ const TrackingPage: React.FC<TrackingPageProps> = ({ userId, isTrainerContext })
                     <h2 className="text-xl font-bold mb-4">Historial de Reportes</h2>
                     <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                         {logs.map((log, index) => (
-                            <div key={log.date + '-' + index} className="p-4 bg-base-100 rounded-lg">
+                            <div key={`log-${log.date}-${index}`} className="p-4 bg-base-100 rounded-lg">
                                 <p className="font-bold text-text-base">{new Date(log.date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
                                     <p><strong>Peso:</strong> {log.weight || 'N/A'} kg</p>
                                     {log.measurements && Object.entries(log.measurements).map(([key, value]) => (
-                                        <p key={key}><strong>{measurementLabels[key]}:</strong> {value} cm</p>
+                                        <p key={`measurement-${log.date}-${key}`}><strong>{measurementLabels[key]}:</strong> {value} cm</p>
                                     ))}
                                     <p><strong>Cumplimiento:</strong> {log.dietCompliance}/10</p>
                                 </div>

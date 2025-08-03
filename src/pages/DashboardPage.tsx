@@ -3,7 +3,7 @@ import { User, UserRole } from '../types';
 import Card from '../components/ui/Card';
 import { AppleIcon, BarChartIcon, DumbbellIcon } from '../components/ui/Icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { plans, progress, clients } from '../services/apiService';
 
 interface DashboardPageProps {
@@ -12,6 +12,8 @@ interface DashboardPageProps {
 }
 
 const UserDashboard: React.FC<{ user: User }> = ({ user }) => {
+    const { clientId } = useParams<{ clientId: string }>();
+    const isTrainerContext = !!clientId;
     const [progressLogs, setProgressLogs] = useState<any[]>([]);
     const [dietPlan, setDietPlan] = useState<any>(null);
     const [workoutPlan, setWorkoutPlan] = useState<any>(null);
@@ -19,11 +21,19 @@ const UserDashboard: React.FC<{ user: User }> = ({ user }) => {
 
     useEffect(() => {
         const fetchDashboardData = async () => {
+            const userId = user._id || user.id;
+            
+            if (!userId) {
+                console.error('Error: userId no disponible');
+                setLoading(false);
+                return;
+            }
+
             try {
                 const [progressResponse, dietResponse, workoutResponse] = await Promise.all([
-                    progress.getProgressLogs(user.id, { limit: 10, sortBy: 'date', sortOrder: 'desc' }),
-                    plans.getDietPlan(user.id).catch(() => ({ data: { data: null } })),
-                    plans.getWorkoutPlan(user.id).catch(() => ({ data: { data: null } }))
+                    progress.getProgressLogs(userId, { limit: 10, sortBy: 'date', sortOrder: 'desc' }),
+                    plans.getDietPlan(userId).catch(() => ({ data: { data: null } })),
+                    plans.getWorkoutPlan(userId).catch(() => ({ data: { data: null } }))
                 ]);
 
                 setProgressLogs(progressResponse.data.data || []);
@@ -37,7 +47,7 @@ const UserDashboard: React.FC<{ user: User }> = ({ user }) => {
         };
 
         fetchDashboardData();
-    }, [user.id]);
+    }, [user._id, user.id]);
 
     if (loading) {
         return <div className="text-center p-8">Cargando dashboard...</div>;
@@ -124,7 +134,7 @@ const UserDashboard: React.FC<{ user: User }> = ({ user }) => {
 
             {/* Enlaces rápidos */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Link to="/diet" className="block">
+                <Link to={isTrainerContext ? `/client/${clientId}/diet` : `/diet`} className="block">
                     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                         <div className="text-center">
                             <AppleIcon className="w-8 h-8 mx-auto mb-2 text-primary" />
@@ -133,7 +143,7 @@ const UserDashboard: React.FC<{ user: User }> = ({ user }) => {
                     </Card>
                 </Link>
                 
-                <Link to="/workout" className="block">
+                <Link to={isTrainerContext ? `/client/${clientId}/workout` : `/workout`} className="block">
                     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                         <div className="text-center">
                             <DumbbellIcon className="w-8 h-8 mx-auto mb-2 text-secondary" />
@@ -142,7 +152,7 @@ const UserDashboard: React.FC<{ user: User }> = ({ user }) => {
                     </Card>
                 </Link>
                 
-                <Link to="/tracking" className="block">
+                <Link to={isTrainerContext ? `/client/${clientId}/tracking` : `/tracking`} className="block">
                     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                         <div className="text-center">
                             <BarChartIcon className="w-8 h-8 mx-auto mb-2 text-accent" />
@@ -151,7 +161,7 @@ const UserDashboard: React.FC<{ user: User }> = ({ user }) => {
                     </Card>
                 </Link>
                 
-                <Link to="/chat" className="block">
+                <Link to={isTrainerContext ? `/client/${clientId}/chat` : `/chat`} className="block">
                     <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                         <div className="text-center">
                             <div className="w-8 h-8 mx-auto mb-2 bg-purple-500 rounded-full flex items-center justify-center">
@@ -229,8 +239,8 @@ const TrainerDashboard: React.FC<{ user: User }> = ({ user }) => {
                     <div className="space-y-3">
                         {clientsList.map(client => (
                             <Link 
-                                key={client.id} 
-                                to={`/client/${client.id}/dashboard`}
+                                key={client._id || client.id} 
+                                to={`/client/${client._id || client.id}/dashboard`}
                                 className="block p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                             >
                                 <div className="flex items-center justify-between">
@@ -264,9 +274,16 @@ const TrainerDashboard: React.FC<{ user: User }> = ({ user }) => {
 };
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ currentUser, isTrainerContext = false }) => {
+    // Si es entrenador y NO estamos en contexto de cliente, mostrar dashboard del entrenador
     if (currentUser.role === UserRole.TRAINER && !isTrainerContext) {
         return <TrainerDashboard user={currentUser} />;
-    } else {
+    } 
+    // Si es entrenador y estamos en contexto de cliente, mostrar dashboard del cliente
+    else if (currentUser.role === UserRole.TRAINER && isTrainerContext) {
+        return <UserDashboard user={currentUser} />;
+    }
+    // Si es usuario normal, mostrar su propio dashboard
+    else {
         return <UserDashboard user={currentUser} />;
     }
 };

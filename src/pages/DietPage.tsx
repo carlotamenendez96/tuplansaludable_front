@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { DietPlan, Meal } from '../types';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
+import ConfirmModal from '../components/common/ConfirmModal';
 import { CheckCircleIcon, XCircleIcon, TrashIcon, DumbbellIcon } from '../components/ui/Icons';
 import { plans } from '../services/apiService';
 
@@ -11,9 +12,10 @@ interface DietPageProps {
 }
 
 const emptyMeal: Meal = {
-    name: '',
-    time: '09:00',
+    type: 'SNACK',
     foods: [],
+    totalCalories: 0,
+    notes: ''
 };
 
 const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
@@ -24,6 +26,10 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
   const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; mealIndex: number | null }>({
+    isOpen: false,
+    mealIndex: null
+  });
 
   const fetchDietPlan = useCallback(async () => {
     setLoading(true);
@@ -64,10 +70,34 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
       setIsModalOpen(true);
   }
   
+  // Función auxiliar para calcular calorías totales de una comida
+  const calculateMealCalories = (meal: Meal) => {
+    return meal.foods.reduce((total, foodItem) => {
+      const multiplier = foodItem.quantity / 100;
+      return total + (foodItem.food.calories * multiplier);
+    }, 0);
+  };
+
+  // Función auxiliar para asegurar que todas las comidas tengan totalCalories
+  const ensureMealsHaveCalories = (meals: Meal[]) => {
+    return meals.map(meal => ({
+      ...meal,
+      totalCalories: meal.totalCalories || calculateMealCalories(meal)
+    }));
+  };
+
   const handleAddMeal = async () => {
     if (!dietPlan) return;
     try {
-      const updatedMeals = [...dietPlan.meals, newMeal];
+      // Convertir la estructura del frontend a la estructura del backend
+      const backendMeal = {
+        type: newMeal.type as 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK',
+        foods: newMeal.foods,
+        totalCalories: calculateMealCalories(newMeal),
+        notes: newMeal.notes || `Comida añadida: ${newMeal.type}`
+      };
+
+      const updatedMeals = ensureMealsHaveCalories([...dietPlan.meals, backendMeal]);
       const updatedPlan = { ...dietPlan, meals: updatedMeals };
       const response = await plans.updateDietPlan(userId, updatedPlan);
       setDietPlan(response.data.data);
@@ -78,21 +108,27 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
     }
   };
 
-  const handleDeleteMeal = async (mealName: string) => {
-    if (!dietPlan) return;
-    if (!window.confirm(`¿Seguro que quieres eliminar "${mealName}"?`)) return;
+  const handleDeleteMeal = (mealIndex: number) => {
+    setConfirmDelete({ isOpen: true, mealIndex });
+  };
+
+  const confirmDeleteMeal = async () => {
+    if (!dietPlan || confirmDelete.mealIndex === null) return;
+    
     try {
-      const updatedMeals = dietPlan.meals.filter(meal => meal.name !== mealName);
+      const updatedMeals = ensureMealsHaveCalories(dietPlan.meals.filter((_, index) => index !== confirmDelete.mealIndex));
       const updatedPlan = { ...dietPlan, meals: updatedMeals };
       const response = await plans.updateDietPlan(userId, updatedPlan);
       setDietPlan(response.data.data);
     } catch (err: any) {
       console.error('Error deleting meal:', err);
       setError(err.response?.data?.message || 'Error al eliminar comida.');
+    } finally {
+      setConfirmDelete({ isOpen: false, mealIndex: null });
     }
   };
   
-  const handleModalInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleModalInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
       const { name, value } = e.target;
       if (name === 'foods') {
           // Convertir el texto a la estructura de objetos
@@ -133,7 +169,11 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
   const handleUpdatePlan = async () => {
     if (!dietPlan) return;
     try {
-      const response = await plans.updateDietPlan(userId, dietPlan);
+      const updatedPlan = { 
+        ...dietPlan, 
+        meals: ensureMealsHaveCalories(dietPlan.meals) 
+      };
+      const response = await plans.updateDietPlan(userId, updatedPlan);
       setDietPlan(response.data.data);
       setIsEditing(false);
     } catch (err: any) {
@@ -155,7 +195,7 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
         <div className="text-center p-8">
             <p className="text-text-muted mb-4">No se encontró un plan de alimentación para este usuario.</p>
             {isTrainerContext && (
-                <button onClick={() => setDietPlan({ userId, name: "Nuevo Plan", dailyActivity: "", supplementation: [], description: "", actualMacros: { calories: 0, protein: 0, carbs: 0, fat: 0 }, targetCalories: 0, targetProtein: 0, targetCarbs: 0, targetFat: 0, meals: [], startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], notes: "" })} className="bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-focus">
+                <button onClick={() => setDietPlan({ userId, name: "Nuevo Plan", dailyActivity: "", supplementation: [], description: "", targetCalories: 2000, targetProtein: 150, targetCarbs: 200, targetFat: 67, meals: [], startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], notes: "" })} className="bg-primary text-white font-bold py-2 px-4 rounded-lg hover:bg-primary-focus">
                     Crear Plan de Dieta
                 </button>
             )}
@@ -208,42 +248,45 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {dietPlan.meals.map(meal => (
-          <Card key={meal.name} className="flex flex-col relative">
+        {dietPlan.meals.map((meal, index) => (
+          <Card key={`meal-${index}-${meal.type}`} className="flex flex-col relative">
             {isEditing && (
                  <div className="absolute top-2 right-2 flex gap-2">
-                    <button onClick={() => handleDeleteMeal(meal.name)} className="p-2 bg-red-100 rounded-full hover:bg-red-200"><TrashIcon className="w-4 h-4 text-red-600"/></button>
+                    <button onClick={() => handleDeleteMeal(index)} className="p-2 bg-red-100 rounded-full hover:bg-red-200"><TrashIcon className="w-4 h-4 text-red-600"/></button>
                 </div>
             )}
             <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 className="font-bold text-lg text-primary">{meal.name}</h3>
-                <p className="text-sm text-text-muted">{meal.time}</p>
+                <h3 className="font-bold text-lg text-primary">{meal.type}</h3>
+                <p className="text-sm text-text-muted">{meal.totalCalories} cal</p>
               </div>
             </div>
 
             <div className="my-4 space-y-2 text-sm flex-1">
-              <h4 className="font-semibold">Alimentos (elige una opción de cada línea):</h4>
+              <h4 className="font-semibold">Alimentos:</h4>
               <ul className="list-disc list-inside text-text-muted">
                 {meal.foods.map((foodItem, i) => (
-                  <li key={i}>
+                  <li key={`${meal.type}-food-${i}-${foodItem.food.name}`}>
                     {foodItem.quantity}g {foodItem.food.name}
                   </li>
                 ))}
               </ul>
+              {meal.notes && (
+                <p className="text-xs text-text-muted mt-2 italic">{meal.notes}</p>
+              )}
             </div>
 
             {!isTrainerContext && (
                 <button
-                onClick={() => handleToggleMealCompletion(meal.name)}
+                onClick={() => handleToggleMealCompletion(meal.type)}
                 className={`mt-4 w-full flex items-center justify-center py-2 px-4 rounded-lg text-sm font-semibold transition-colors ${
-                    completedMeals.has(meal.name)
+                    completedMeals.has(meal.type)
                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
                 >
-                {completedMeals.has(meal.name) ? <CheckCircleIcon className="w-5 h-5 mr-2" /> : <XCircleIcon className="w-5 h-5 mr-2" />}
-                {completedMeals.has(meal.name) ? 'Completada' : 'Marcar como completada'}
+                {completedMeals.has(meal.type) ? <CheckCircleIcon className="w-5 h-5 mr-2" /> : <XCircleIcon className="w-5 h-5 mr-2" />}
+                {completedMeals.has(meal.type) ? 'Completada' : 'Marcar como completada'}
                 </button>
             )}
           </Card>
@@ -264,12 +307,17 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
         <form onSubmit={(e) => { e.preventDefault(); handleAddMeal(); }} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-text-muted">Nombre Comida</label>
-                    <input type="text" name="name" value={newMeal.name} onChange={handleModalInputChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" required />
+                    <label className="block text-sm font-medium text-text-muted">Tipo de Comida</label>
+                    <select name="type" value={newMeal.type} onChange={handleModalInputChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" required>
+                        <option value="BREAKFAST">Desayuno</option>
+                        <option value="LUNCH">Almuerzo</option>
+                        <option value="DINNER">Cena</option>
+                        <option value="SNACK">Snack</option>
+                    </select>
                 </div>
                  <div>
-                    <label className="block text-sm font-medium text-text-muted">Hora</label>
-                    <input type="time" name="time" value={newMeal.time} onChange={handleModalInputChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" required/>
+                    <label className="block text-sm font-medium text-text-muted">Notas</label>
+                    <input type="text" name="notes" value={newMeal.notes} onChange={handleModalInputChange} className="mt-1 block w-full border border-base-300 rounded-md shadow-sm p-2" placeholder="Notas opcionales"/>
                 </div>
             </div>
              <div>
@@ -283,6 +331,17 @@ const DietPage: React.FC<DietPageProps> = ({ userId, isTrainerContext }) => {
             </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false, mealIndex: null })}
+        onConfirm={confirmDeleteMeal}
+        title="Eliminar Comida"
+        message="¿Seguro que quieres eliminar esta comida? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmButtonColor="red"
+      />
 
     </div>
   );

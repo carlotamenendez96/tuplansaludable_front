@@ -4,8 +4,12 @@ export enum UserRole {
 }
 
 export interface User {
-  id: string;
-  name: string;
+  id?: string;
+  _id?: string;
+  name?: string; // Para compatibilidad con datos mock
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
   email: string;
   role: UserRole;
   trainerId?: string;
@@ -22,12 +26,13 @@ export interface Food {
 }
 
 export interface Meal {
-  name: string;
-  time: string;
+  type: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
   foods: {
     food: Food;
     quantity: number;
   }[];
+  totalCalories: number;
+  notes?: string;
 }
 
 export interface Supplement {
@@ -75,6 +80,7 @@ export interface Exercise {
   difficulty?: string;
   reps?: number;
   duration?: number;
+  notes?: string;
 }
 
 export interface WorkoutSet {
@@ -91,9 +97,19 @@ export interface WorkoutExercise {
   notes?: string;
 }
 
+export enum WorkoutCategory {
+  CARDIO = 'CARDIO',
+  STRENGTH_UPPER_1 = 'STRENGTH_UPPER_1',
+  STRENGTH_UPPER_2 = 'STRENGTH_UPPER_2',
+  STRENGTH_LOWER_1 = 'STRENGTH_LOWER_1',
+  STRENGTH_LOWER_2 = 'STRENGTH_LOWER_2',
+  FLEXIBILITY = 'FLEXIBILITY'
+}
+
 export interface Workout {
   _id?: string;
   name: string;
+  category: WorkoutCategory;
   exercises: WorkoutExercise[];
   estimatedDuration?: number;
   difficulty?: string;

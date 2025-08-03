@@ -127,12 +127,18 @@ const ClientRoutes: React.FC<ClientRoutesProps> = ({ currentUser }) => {
         return <div className="text-center p-8 text-red-500">Error: Cliente con ID "{clientId}" no encontrado o no autorizado.</div>;
     }
 
+    const userId = client._id || client.id;
+    
+    if (!userId) {
+        return <div className="text-center p-8 text-red-500">Error: ID de cliente no válido.</div>;
+    }
+
     return (
         <Routes>
             <Route path="dashboard" element={<DashboardPage currentUser={client} isTrainerContext={true} />} />
-            <Route path="diet" element={<DietPage userId={client.id} isTrainerContext={true} />} />
-            <Route path="workout" element={<WorkoutPage userId={client.id} isTrainerContext={true} />} />
-            <Route path="tracking" element={<TrackingPage userId={client.id} isTrainerContext={true} />} />
+            <Route path="diet" element={<DietPage userId={userId} isTrainerContext={true} />} />
+            <Route path="workout" element={<WorkoutPage userId={userId} isTrainerContext={true} />} />
+            <Route path="tracking" element={<TrackingPage userId={userId} isTrainerContext={true} />} />
             <Route path="chat" element={<ChatPage currentUser={currentUser} selectedClient={client} />} />
         </Routes>
     );

@@ -33,13 +33,13 @@ const RecipeCard: React.FC<{ recipe: Recipe }> = ({ recipe }) => (
             <div>
                 <h3 className="font-bold text-lg mb-2">Ingredientes</h3>
                 <ul className="list-disc list-inside space-y-1 text-text-base">
-                    {recipe.ingredients.map((item, i) => <li key={i}>{item}</li>)}
+                    {recipe.ingredients.map((item, i) => <li key={`ingredient-${i}-${item.substring(0, 20)}`}>{item}</li>)}
                 </ul>
             </div>
             <div>
                 <h3 className="font-bold text-lg mb-2">Instrucciones</h3>
                 <ol className="list-decimal list-inside space-y-2 text-text-base">
-                    {recipe.instructions.map((item, i) => <li key={i}>{item}</li>)}
+                    {recipe.instructions.map((item, i) => <li key={`instruction-${i}-${item.substring(0, 20)}`}>{item}</li>)}
                 </ol>
             </div>
         </div>

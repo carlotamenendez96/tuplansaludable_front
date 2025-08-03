@@ -50,6 +50,7 @@ export const auth = {
 export const clients = {
   getClients: (params?: any) => api.get('/clients', { params }),
   getClientById: (clientId: string) => api.get(`/clients/${clientId}`),
+  getTrainerClients: () => api.get('/clients'),
   assignClient: (clientId: string) => api.post(`/clients/${clientId}/assign`),
   unassignClient: (clientId: string) => api.delete(`/clients/${clientId}/assign`),
   getClientsStats: () => api.get('/clients/stats'),
@@ -57,22 +58,82 @@ export const clients = {
 
 // Funciones de planes
 export const plans = {
-  getDietPlan: (userId: string) => api.get(`/plans/${userId}/diet`),
-  updateDietPlan: (userId: string, planData: any) => api.put(`/plans/${userId}/diet`, planData),
-  getWorkoutPlan: (userId: string) => api.get(`/plans/${userId}/workout`),
-  updateWorkoutPlan: (userId: string, planData: any) => api.put(`/plans/${userId}/workout`, planData),
-  getPlansHistory: (userId: string, params?: any) => api.get(`/plans/${userId}/history`, { params }),
-  deactivatePlan: (userId: string, type: 'diet' | 'workout') => api.post(`/plans/${userId}/deactivate`, { type }),
+  getDietPlan: (userId: string) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.get(`/plans/${userId}/diet`);
+  },
+  updateDietPlan: (userId: string, planData: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.put(`/plans/${userId}/diet`, planData);
+  },
+  getWorkoutPlan: (userId: string) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.get(`/plans/${userId}/workout`);
+  },
+  updateWorkoutPlan: (userId: string, planData: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.put(`/plans/${userId}/workout`, planData);
+  },
+  getPlansHistory: (userId: string, params?: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.get(`/plans/${userId}/history`, { params });
+  },
+  deactivatePlan: (userId: string, type: 'diet' | 'workout') => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.post(`/plans/${userId}/deactivate`, { type });
+  },
 };
 
 // Funciones de progreso
 export const progress = {
-  getProgressLogs: (userId: string, params?: any) => api.get(`/progress/${userId}`, { params }),
-  createProgressLog: (userId: string, logData: any) => api.post(`/progress/${userId}`, logData),
-  updateProgressLog: (userId: string, logId: string, logData: any) => api.put(`/progress/${userId}/${logId}`, logData),
-  deleteProgressLog: (userId: string, logId: string) => api.delete(`/progress/${userId}/${logId}`),
-  getProgressSummary: (userId: string, params?: any) => api.get(`/progress/${userId}/summary`, { params }),
-  getProgressStats: (userId: string, params?: any) => api.get(`/progress/${userId}/stats`, { params }),
+  getProgressLogs: (userId: string, params?: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.get(`/progress/${userId}`, { params });
+  },
+  createProgressLog: (userId: string, logData: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.post(`/progress/${userId}`, logData);
+  },
+  updateProgressLog: (userId: string, logId: string, logData: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.put(`/progress/${userId}/${logId}`, logData);
+  },
+  deleteProgressLog: (userId: string, logId: string) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.delete(`/progress/${userId}/${logId}`);
+  },
+  getProgressSummary: (userId: string, params?: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.get(`/progress/${userId}/summary`, { params });
+  },
+  getProgressStats: (userId: string, params?: any) => {
+    if (!userId) {
+      return Promise.reject(new Error('userId es requerido'));
+    }
+    return api.get(`/progress/${userId}/stats`, { params });
+  },
 };
 
 // Funciones de chat

@@ -59,15 +59,15 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onClientSelect, clien
         
         {isTrainer && (
           <div className="px-4 pt-4">
-            <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-2">Clientes</h3>
+            <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-2">Clientes ({clients.length})</h3>
             <ul className="space-y-1 max-h-48 overflow-y-auto">
               {clients.map(client => (
-                <li key={client.id}>
+                <li key={client._id || client.id}>
                   <button
                     onClick={() => onClientSelect && onClientSelect(client)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedClient?.id === client.id ? 'bg-secondary/20 text-secondary font-semibold' : 'hover:bg-base-200'}`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${selectedClient?._id === client._id || selectedClient?.id === client.id ? 'bg-secondary/20 text-secondary font-semibold' : 'hover:bg-base-200'}`}
                   >
-                    {client.name}
+                    {client.fullName || `${client.firstName} ${client.lastName}`}
                   </button>
                 </li>
               ))}
@@ -78,14 +78,14 @@ const Sidebar: React.FC<SidebarProps> = ({ user, onLogout, onClientSelect, clien
         {isTrainer && selectedClient && (
           <div className="px-4 pt-4 border-t border-base-200 mt-4">
             <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-2">
-              Plan de {selectedClient.name.split(' ')[0]}
+              Plan de {(selectedClient.fullName || `${selectedClient.firstName} ${selectedClient.lastName}`).split(' ')[0]}
             </h3>
             <div className="space-y-1">
-                <NavItem to={`/client/${selectedClient.id}/dashboard`} icon={<HomeIcon className="w-5 h-5" />} label="Dashboard" />
-                <NavItem to={`/client/${selectedClient.id}/diet`} icon={<AppleIcon className="w-5 h-5" />} label="Plan Comida" />
-                <NavItem to={`/client/${selectedClient.id}/workout`} icon={<DumbbellIcon className="w-5 h-5" />} label="Entrenamiento" />
-                <NavItem to={`/client/${selectedClient.id}/tracking`} icon={<BarChartIcon className="w-5 h-5" />} label="Seguimiento" />
-                <NavItem to={`/client/${selectedClient.id}/chat`} icon={<MessageSquareIcon className="w-5 h-5" />} label="Chat" />
+                <NavItem to={`/client/${selectedClient._id || selectedClient.id}/dashboard`} icon={<HomeIcon className="w-5 h-5" />} label="Dashboard" />
+                <NavItem to={`/client/${selectedClient._id || selectedClient.id}/diet`} icon={<AppleIcon className="w-5 h-5" />} label="Plan Comida" />
+                <NavItem to={`/client/${selectedClient._id || selectedClient.id}/workout`} icon={<DumbbellIcon className="w-5 h-5" />} label="Entrenamiento" />
+                <NavItem to={`/client/${selectedClient._id || selectedClient.id}/tracking`} icon={<BarChartIcon className="w-5 h-5" />} label="Seguimiento" />
+                <NavItem to={`/client/${selectedClient._id || selectedClient.id}/chat`} icon={<MessageSquareIcon className="w-5 h-5" />} label="Chat" />
             </div>
           </div>
         )}

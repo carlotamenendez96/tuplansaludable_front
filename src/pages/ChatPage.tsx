@@ -65,7 +65,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, selectedClient }) => {
     } else if (currentUser.role === UserRole.TRAINER && selectedClient) {
       partner = selectedClient;
       setActiveChatPartner(partner);
-      fetchChatHistory(partner.id);
+      const partnerId = partner._id || partner.id;
+      if (partnerId) {
+        fetchChatHistory(partnerId);
+      }
     } else if (currentUser.role === UserRole.TRAINER && !selectedClient) {
       setLoadingChat(false);
       setError('Selecciona un cliente para empezar a chatear.');
@@ -74,9 +77,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, selectedClient }) => {
     // Setup WebSocket connection
     const token = localStorage.getItem('token');
     if (token && partner) {
+      const userId = currentUser._id || currentUser.id;
+      const partnerId = partner._id || partner.id;
+      
+      if (!userId || !partnerId) {
+        console.error('Error: userId o partnerId no disponibles');
+        return;
+      }
+      
       socketRef.current = io(SOCKET_URL, {
         auth: { token },
-        query: { userId: currentUser.id, partnerId: partner.id },
+        query: { userId, partnerId },
       });
 
       socketRef.current.on('connect', () => {
@@ -111,15 +122,28 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, selectedClient }) => {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !activeChatPartner) return;
 
+    const userId = currentUser._id || currentUser.id;
+    const receiverId = activeChatPartner._id || activeChatPartner.id;
+    
+    if (!userId || !receiverId) {
+      console.error('Error: userId o receiverId no disponibles');
+      return;
+    }
+    
     const messageData = {
-      sender: currentUser.id,
-      receiver: activeChatPartner.id,
+      sender: userId,
+      receiver: receiverId,
       text: newMessage,
     };
     
     try {
       // Send via REST API
-      const response = await chat.sendMessage(activeChatPartner.id, messageData);
+      const partnerId = activeChatPartner._id || activeChatPartner.id;
+      if (!partnerId) {
+        console.error('Error: partnerId no disponible');
+        return;
+      }
+      const response = await chat.sendMessage(partnerId, messageData);
       const sentMessage = response.data.data; // Assuming backend returns the saved message
       
       // Emit via WebSocket for real-time update to other connected clients
@@ -141,10 +165,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, selectedClient }) => {
     const userQuestion = newMessage;
     setNewMessage('');
     
+    const userId = currentUser._id || currentUser.id;
+    
+    if (!userId) {
+      console.error('Error: userId no disponible');
+      return;
+    }
+    
     // Optimistically add user's question
     const questionMessage: ChatMessage = {
       id: Date.now().toString(),
-      senderId: currentUser.id,
+      senderId: userId,
       receiverId: 'AI',
       text: userQuestion,
       timestamp: new Date().toISOString(),
@@ -156,7 +187,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, selectedClient }) => {
     const responseMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         senderId: 'AI',
-        receiverId: currentUser.id,
+        receiverId: userId,
         text: aiResponse,
         timestamp: new Date().toISOString(),
         isAIMessage: true,
@@ -188,27 +219,31 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, selectedClient }) => {
 
       <div className="flex-1 p-6 overflow-y-auto bg-base-100">
         <div className="space-y-4">
-          {messages.map(msg => (
-            <div key={msg.id} className={`flex items-end gap-3 ${msg.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}>
-               {msg.senderId !== currentUser.id && (
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-                  {msg.isAIMessage ? 'AI' : activeChatPartner?.name.charAt(0)}
+          {messages.map(msg => {
+            const userId = currentUser._id || currentUser.id;
+            if (!userId) return null;
+            return (
+              <div key={msg.id} className={`flex items-end gap-3 ${msg.senderId === userId ? 'justify-end' : 'justify-start'}`}>
+                 {msg.senderId !== userId && (
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+                    {msg.isAIMessage ? 'AI' : activeChatPartner?.name.charAt(0)}
+                  </div>
+                )}
+                <div
+                  className={`max-w-md p-3 rounded-xl ${
+                    msg.senderId === userId
+                      ? 'bg-primary text-white rounded-br-none'
+                      : msg.isAIMessage 
+                      ? 'bg-amber-100 text-amber-800 rounded-bl-none'
+                      : 'bg-base-200 text-text-base rounded-bl-none'
+                  }`}
+                >
+                  <p>{msg.text}</p>
+                   <p className={`text-xs mt-1 ${msg.senderId === userId ? 'text-gray-200' : 'text-text-muted'} `}>{new Date(msg.timestamp).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</p>
                 </div>
-              )}
-              <div
-                className={`max-w-md p-3 rounded-xl ${
-                  msg.senderId === currentUser.id
-                    ? 'bg-primary text-white rounded-br-none'
-                    : msg.isAIMessage 
-                    ? 'bg-amber-100 text-amber-800 rounded-bl-none'
-                    : 'bg-base-200 text-text-base rounded-bl-none'
-                }`}
-              >
-                <p>{msg.text}</p>
-                 <p className={`text-xs mt-1 ${msg.senderId === currentUser.id ? 'text-gray-200' : 'text-text-muted'} `}>{new Date(msg.timestamp).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'})}</p>
               </div>
-            </div>
-          ))}
+            );
+          })}
            {isLoadingAI && (
                 <div className="flex items-end gap-3 justify-start">
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">AI</div>
